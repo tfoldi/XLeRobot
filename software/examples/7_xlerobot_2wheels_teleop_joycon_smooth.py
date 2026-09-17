@@ -5,7 +5,7 @@ PYTHONPATH=src python -m lerobot.robots.xlerobot_2wheels.xlerobot_2wheels_host -
 
 # To Run the teleop:
 '''
-PYTHONPATH=src python -m examples.xlerobot_2wheels.teleoperate_joycon
+PYTHONPATH=src python examples/7_xlerobot_2wheels_teleop_joycon_smooth.py
 '''
 
 # Base speed control instructions:

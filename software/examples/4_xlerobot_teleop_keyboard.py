@@ -5,7 +5,7 @@ PYTHONPATH=src python -m lerobot.robots.xlerobot.xlerobot_host --robot.id=my_xle
 
 # To Run the teleop:
 '''python
-PYTHONPATH=src python -m examples.xlerobot.teleoperate_Keyboard
+PYTHONPATH=src python examples/4_xlerobot_teleop_keyboard.py
 # Optional: --robot.id=my_xlerobot_pc --robot.port1=/dev/ttyACM0 --robot.port2=/dev/ttyACM1 --fps=50
 '''
 

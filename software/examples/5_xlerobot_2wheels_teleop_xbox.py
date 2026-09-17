@@ -5,7 +5,7 @@ PYTHONPATH=src python -m lerobot.robots.xlerobot_2wheels.xlerobot_2wheels_host -
 
 # To Run the teleop:
 '''
-PYTHONPATH=src python -m examples.xlerobot_2wheels.teleoperate_XBOX
+PYTHONPATH=src python examples/5_xlerobot_2wheels_teleop_xbox.py
 # Optional: --robot.id=my_xlerobot_2wheels_lab --robot.port1=/dev/ttyACM0 --robot.port2=/dev/ttyACM1 --ip=localhost --fps=30 --controller.profile=generic
 '''
 
