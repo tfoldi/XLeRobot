@@ -6,7 +6,7 @@ PYTHONPATH=src python -m lerobot.robots.xlerobot.xlerobot_host --robot.id=my_xle
 # To Run the teleop:
 '''
 PYTHONPATH=src python -m examples.xlerobot.teleoperate_XBOX
-# Optional: --robot.id=my_xlerobot --robot.port1=/dev/ttyACM0 --robot.port2=/dev/ttyACM1 --fps=30
+# Optional: --robot.id=my_xlerobot --robot.port1=/dev/ttyACM0 --robot.port2=/dev/ttyACM1 --fps=30 --controller.profile=generic
 '''
 
 import argparse
@@ -54,6 +54,32 @@ RIGHT_KEYMAP = {
 BASE_KEYMAP = {
     'forward': 'dpad_down', 'backward': 'dpad_up',
     'rotate_left': 'dpad_left', 'rotate_right': 'dpad_right',
+}
+
+# Button/axis index layouts differ across pads even when they nominally follow the
+# Xbox layout (A/B/X/Y, dual sticks, D-pad, LB/RB/LT/RT). "xbox" matches a genuine
+# Xbox controller under Linux/pygame; "generic" matches common cheap USB/2.4G pads
+# (e.g. DragonRise-chipset "PS2-look" controllers) - calibrate a new one by running
+# calibrate_gamepad.py and comparing its output against these values.
+CONTROLLER_PROFILES = {
+    "xbox": {
+        "a": 0, "b": 1, "x": 2, "y": 3,
+        "lb": 4, "rb": 5, "back": 6,
+        "left_stick_click": 9, "right_stick_click": 10,
+        "left_stick_x": 0, "left_stick_y": 1,
+        "right_stick_x": 3, "right_stick_y": 4,
+        "left_trigger_axis": 2, "right_trigger_axis": 5,
+        "trigger_threshold": 0.5,
+    },
+    "generic": {
+        "a": 0, "b": 1, "x": 3, "y": 4,
+        "lb": 6, "rb": 7, "back": 10,
+        "left_stick_click": 13, "right_stick_click": 14,
+        "left_stick_x": 0, "left_stick_y": 1,
+        "right_stick_x": 2, "right_stick_y": 3,
+        "left_trigger_axis": 4, "right_trigger_axis": 5,
+        "trigger_threshold": 0.0,
+    },
 }
 
 # Global reset key for all components
@@ -251,38 +277,48 @@ class SimpleTeleopArm:
     
 
 # --- XBOX Controller Mapping ---
-def get_xbox_key_state(joystick, keymap):
+def get_xbox_key_state(joystick, keymap, profile=CONTROLLER_PROFILES["xbox"]):
     """
-    Map XBOX controller state to semantic action booleans using the provided keymap.
+    Map controller state to semantic action booleans using the provided keymap
+    and button/axis index profile (see CONTROLLER_PROFILES).
     """
     # Read axes, buttons, hats
     axes = [joystick.get_axis(i) for i in range(joystick.get_numaxes())]
     buttons = [joystick.get_button(i) for i in range(joystick.get_numbuttons())]
     hats = joystick.get_hat(0) if joystick.get_numhats() > 0 else (0, 0)
-    
+
+    def btn(name):
+        i = profile[name]
+        return bool(buttons[i]) if len(buttons) > i else False
+
+    def axis(name):
+        i = profile[name]
+        return axes[i] if len(axes) > i else 0.0
+
     # Get stick pressed states
-    left_stick_pressed = bool(buttons[9]) if len(buttons) > 9 else False
-    right_stick_pressed = bool(buttons[10]) if len(buttons) > 10 else False
-    lb_pressed = bool(buttons[4]) if len(buttons) > 4 else False
-    rb_pressed = bool(buttons[5]) if len(buttons) > 5 else False
+    left_stick_pressed = btn("left_stick_click")
+    right_stick_pressed = btn("right_stick_click")
+    lb_pressed = btn("lb")
+    rb_pressed = btn("rb")
+    trigger_threshold = profile["trigger_threshold"]
 
     # Map controller state to semantic actions
     state = {}
     for action, control in keymap.items():
         if control == 'left_trigger':
-            state[action] = axes[2] > 0.5 if len(axes) > 2 else False
+            state[action] = axis("left_trigger_axis") > trigger_threshold
         elif control == 'right_trigger':
-            state[action] = axes[5] > 0.5 if len(axes) > 5 else False
+            state[action] = axis("right_trigger_axis") > trigger_threshold
         elif control == 'a':
-            state[action] = bool(buttons[0])
+            state[action] = btn("a")
         elif control == 'b':
-            state[action] = bool(buttons[1])
+            state[action] = btn("b")
         elif control == 'x':
-            state[action] = bool(buttons[2])
+            state[action] = btn("x")
         elif control == 'y':
-            state[action] = bool(buttons[3])
+            state[action] = btn("y")
         elif control == 'back':
-            state[action] = bool(buttons[6])
+            state[action] = btn("back")
         elif control == 'dpad_up':
             state[action] = hats[1] == 1
         elif control == 'dpad_down':
@@ -293,50 +329,50 @@ def get_xbox_key_state(joystick, keymap):
             state[action] = hats[0] == 1
         # Left stick controls (when not pressed)
         elif control == 'left_stick_up':
-            state[action] = (not left_stick_pressed) and (not lb_pressed) and (axes[1] < -0.5) if len(axes) > 1 else False
+            state[action] = (not left_stick_pressed) and (not lb_pressed) and (axis("left_stick_y") < -0.5)
         elif control == 'left_stick_down':
-            state[action] = (not left_stick_pressed) and (not lb_pressed) and (axes[1] > 0.5) if len(axes) > 1 else False
+            state[action] = (not left_stick_pressed) and (not lb_pressed) and (axis("left_stick_y") > 0.5)
         elif control == 'left_stick_left':
-            state[action] = (not left_stick_pressed) and (not lb_pressed) and (axes[0] < -0.5) if len(axes) > 0 else False
+            state[action] = (not left_stick_pressed) and (not lb_pressed) and (axis("left_stick_x") < -0.5)
         elif control == 'left_stick_right':
-            state[action] = (not left_stick_pressed) and (not lb_pressed) and (axes[0] > 0.5) if len(axes) > 0 else False
-        # Right stick controls (when not pressed) - Fixed axis mapping
+            state[action] = (not left_stick_pressed) and (not lb_pressed) and (axis("left_stick_x") > 0.5)
+        # Right stick controls (when not pressed)
         elif control == 'right_stick_up':
-            state[action] = (not right_stick_pressed) and (not rb_pressed) and (axes[4] < -0.5) if len(axes) > 4 else False
+            state[action] = (not right_stick_pressed) and (not rb_pressed) and (axis("right_stick_y") < -0.5)
         elif control == 'right_stick_down':
-            state[action] = (not right_stick_pressed) and (not rb_pressed) and (axes[4] > 0.5) if len(axes) > 4 else False
+            state[action] = (not right_stick_pressed) and (not rb_pressed) and (axis("right_stick_y") > 0.5)
         elif control == 'right_stick_left':
-            state[action] = (not right_stick_pressed) and (not rb_pressed) and (axes[3] < -0.5) if len(axes) > 3 else False
+            state[action] = (not right_stick_pressed) and (not rb_pressed) and (axis("right_stick_x") < -0.5)
         elif control == 'right_stick_right':
-            state[action] = (not right_stick_pressed) and (not rb_pressed) and (axes[3] > 0.5) if len(axes) > 3 else False
+            state[action] = (not right_stick_pressed) and (not rb_pressed) and (axis("right_stick_x") > 0.5)
         # Left stick pressed controls
         elif control == 'left_stick_pressed_right':
-            state[action] = left_stick_pressed and (not lb_pressed) and (axes[0] > 0.5) if len(axes) > 0 else False
+            state[action] = left_stick_pressed and (not lb_pressed) and (axis("left_stick_x") > 0.5)
         elif control == 'left_stick_pressed_left':
-            state[action] = left_stick_pressed and (not lb_pressed) and (axes[0] < -0.5) if len(axes) > 0 else False
-        # Right stick pressed controls - Fixed axis mapping
+            state[action] = left_stick_pressed and (not lb_pressed) and (axis("left_stick_x") < -0.5)
+        # Right stick pressed controls
         elif control == 'right_stick_pressed_right':
-            state[action] = right_stick_pressed and (not rb_pressed) and (axes[3] > 0.5) if len(axes) > 3 else False
+            state[action] = right_stick_pressed and (not rb_pressed) and (axis("right_stick_x") > 0.5)
         elif control == 'right_stick_pressed_left':
-            state[action] = right_stick_pressed and (not rb_pressed) and (axes[3] < -0.5) if len(axes) > 3 else False
+            state[action] = right_stick_pressed and (not rb_pressed) and (axis("right_stick_x") < -0.5)
         # LB pressed controls (only when stick is moved)
         elif control == 'lb_up':
-            state[action] = lb_pressed and (abs(axes[1]) > 0.5) and (axes[1] < -0.5) if len(axes) > 1 else False
+            state[action] = lb_pressed and (abs(axis("left_stick_y")) > 0.5) and (axis("left_stick_y") < -0.5)
         elif control == 'lb_down':
-            state[action] = lb_pressed and (abs(axes[1]) > 0.5) and (axes[1] > 0.5) if len(axes) > 1 else False
+            state[action] = lb_pressed and (abs(axis("left_stick_y")) > 0.5) and (axis("left_stick_y") > 0.5)
         elif control == 'lb_right':
-            state[action] = lb_pressed and (abs(axes[0]) > 0.5) and (axes[0] > 0.5) if len(axes) > 0 else False
+            state[action] = lb_pressed and (abs(axis("left_stick_x")) > 0.5) and (axis("left_stick_x") > 0.5)
         elif control == 'lb_left':
-            state[action] = lb_pressed and (abs(axes[0]) > 0.5) and (axes[0] < -0.5) if len(axes) > 0 else False
+            state[action] = lb_pressed and (abs(axis("left_stick_x")) > 0.5) and (axis("left_stick_x") < -0.5)
         # RB pressed controls (only when stick is moved)
         elif control == 'rb_up':
-            state[action] = rb_pressed and (abs(axes[4]) > 0.5) and (axes[4] < -0.5) if len(axes) > 4 else False
+            state[action] = rb_pressed and (abs(axis("right_stick_y")) > 0.5) and (axis("right_stick_y") < -0.5)
         elif control == 'rb_down':
-            state[action] = rb_pressed and (abs(axes[4]) > 0.5) and (axes[4] > 0.5) if len(axes) > 4 else False
+            state[action] = rb_pressed and (abs(axis("right_stick_y")) > 0.5) and (axis("right_stick_y") > 0.5)
         elif control == 'rb_right':
-            state[action] = rb_pressed and (abs(axes[3]) > 0.5) and (axes[3] > 0.5) if len(axes) > 3 else False
+            state[action] = rb_pressed and (abs(axis("right_stick_x")) > 0.5) and (axis("right_stick_x") > 0.5)
         elif control == 'rb_left':
-            state[action] = rb_pressed and (abs(axes[3]) > 0.5) and (axes[3] < -0.5) if len(axes) > 3 else False
+            state[action] = rb_pressed and (abs(axis("right_stick_x")) > 0.5) and (axis("right_stick_x") < -0.5)
         else:
             state[action] = False
     return state
@@ -368,17 +404,18 @@ def get_base_action(joystick, robot):
     
     return base_action
 
-def get_base_speed_control(joystick):
+def get_base_speed_control(joystick, profile=CONTROLLER_PROFILES["xbox"]):
     """
     Get base speed control from XBOX controller - LB for speed decrease, RB for speed increase.
     Returns speed multiplier (1.0, 2.0, or 3.0) and prints current speed level.
     """
     # Read controller state
     buttons = [joystick.get_button(i) for i in range(joystick.get_numbuttons())]
-    
+
     # Get LB and RB states
-    lb_pressed = bool(buttons[4]) if len(buttons) > 4 else False
-    rb_pressed = bool(buttons[5]) if len(buttons) > 5 else False
+    lb_i, rb_i = profile["lb"], profile["rb"]
+    lb_pressed = bool(buttons[lb_i]) if len(buttons) > lb_i else False
+    rb_pressed = bool(buttons[rb_i]) if len(buttons) > rb_i else False
     
     # Get current speed level from global variable
     global current_base_speed_level
@@ -409,9 +446,15 @@ def main():
     parser.add_argument("--robot.port1", type=str, default="/dev/ttyACM0", help="Port 1 (so101 + head camera)")
     parser.add_argument("--robot.port2", type=str, default="/dev/ttyACM1", help="Port 2 (same as lekiwi setup)")
     parser.add_argument("--fps", type=int, default=30, help="Control loop frequency")
+    parser.add_argument(
+        "--controller.profile", type=str, default="xbox", choices=list(CONTROLLER_PROFILES),
+        help="Button/axis index layout to use - 'xbox' for a real Xbox controller, 'generic' for "
+             "common cheap USB/2.4G pads (calibrate a new one with calibrate_gamepad.py)",
+    )
     args = parser.parse_args()
 
     FPS = args.fps
+    profile = CONTROLLER_PROFILES[getattr(args, "controller.profile")]
     robot_config = XLerobotConfig(
         id=getattr(args, "robot.id"),
         port1=getattr(args, "robot.port1"),
@@ -437,7 +480,7 @@ def main():
         return
     joystick = pygame.joystick.Joystick(0)
     joystick.init()
-    print(f"[MAIN] Using controller: {joystick.get_name()}")
+    print(f"[MAIN] Using controller: {joystick.get_name()} (profile: {getattr(args, 'controller.profile')})")
 
     # Init the arm and head instances
     obs = robot.get_observation()
@@ -454,8 +497,8 @@ def main():
     try:
         while True:
             pygame.event.pump()
-            left_key_state = get_xbox_key_state(joystick, LEFT_KEYMAP)
-            right_key_state = get_xbox_key_state(joystick, RIGHT_KEYMAP)
+            left_key_state = get_xbox_key_state(joystick, LEFT_KEYMAP, profile)
+            right_key_state = get_xbox_key_state(joystick, RIGHT_KEYMAP, profile)
             
             # Check for global reset (back button)
             buttons = [joystick.get_button(i) for i in range(joystick.get_numbuttons())]
@@ -480,7 +523,7 @@ def main():
 
             # Get base action and speed control from controller
             base_action = get_base_action(joystick, robot)
-            speed_multiplier = get_base_speed_control(joystick)
+            speed_multiplier = get_base_speed_control(joystick, profile)
             
             # Apply speed multiplier to base actions if they exist
             if base_action:
