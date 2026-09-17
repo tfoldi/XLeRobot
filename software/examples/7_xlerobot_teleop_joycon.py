@@ -16,6 +16,7 @@ PYTHONPATH=src python -m examples.xlerobot.teleoperate_joycon
 #   * BASE_DECELERATION_RATE: deceleration slope (speed/second)
 #   * BASE_MAX_SPEED: maximum speed multiplier
 
+import argparse
 import time
 import numpy as np
 import math
@@ -417,11 +418,21 @@ def get_joycon_speed_control(joycon):
 
 
 def main():
-    FPS = 30
-    
+    parser = argparse.ArgumentParser(description="XLerobot Joy-Con Teleop")
+    parser.add_argument("--robot.id", type=str, default="my_xlerobot", help="Robot config id")
+    parser.add_argument("--robot.port1", type=str, default="/dev/ttyACM0", help="Port 1 (so101 + head camera)")
+    parser.add_argument("--robot.port2", type=str, default="/dev/ttyACM1", help="Port 2 (same as lekiwi setup)")
+    parser.add_argument("--fps", type=int, default=30, help="Control loop frequency")
+    args = parser.parse_args()
+
+    FPS = args.fps
+
     # Try to use saved calibration file to avoid recalibrating each time
-    # You can modify robot_id here to match your robot configuration
-    robot_config = XLerobotConfig(id="my_xlerobot")  # Can be modified to your robot ID
+    robot_config = XLerobotConfig(
+        id=getattr(args, "robot.id"),
+        port1=getattr(args, "robot.port1"),
+        port2=getattr(args, "robot.port2"),
+    )
     robot = XLerobot(robot_config)
     
     try:

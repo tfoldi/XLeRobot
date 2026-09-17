@@ -5,6 +5,7 @@ Uses handle_vr_input with delta action control
 """
 
 # Standard library imports
+import argparse
 import asyncio
 import logging
 import math
@@ -452,14 +453,23 @@ def main():
     """
     print("XLerobot VR Control Example")
     print("="*50)
-    
+
+    parser = argparse.ArgumentParser(description="XLerobot VR Teleop")
+    parser.add_argument("--robot.id", type=str, default="my_xlerobot", help="Robot config id")
+    parser.add_argument("--robot.port1", type=str, default="/dev/ttyACM0", help="Port 1 (so101 + head camera)")
+    parser.add_argument("--robot.port2", type=str, default="/dev/ttyACM1", help="Port 2 (same as lekiwi setup)")
+    args = parser.parse_args()
+
     # Initialize pygame for keyboard input handling
     pygame.init()
 
     try:
         # Try to use saved calibration file to avoid recalibrating each time
-        # You can modify robot_id here to match your robot configuration
-        robot_config = XLerobotConfig()  # Can be modified to your robot ID
+        robot_config = XLerobotConfig(
+            id=getattr(args, "robot.id"),
+            port1=getattr(args, "robot.port1"),
+            port2=getattr(args, "robot.port2"),
+        )
         robot = XLerobot(robot_config)
         
         try:
