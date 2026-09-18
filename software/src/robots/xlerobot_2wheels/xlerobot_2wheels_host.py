@@ -14,6 +14,7 @@
 
 import json
 import logging
+import os
 import time
 from typing import Any
 
@@ -27,6 +28,12 @@ from .xlerobot_2wheels import XLerobot2Wheels
 from .config_xlerobot_2wheels import XLerobot2WheelsConfig, XLerobot2WheelsHostConfig
 
 logger = logging.getLogger(__name__)
+
+
+def _default_port(udev_name: str, fallback: str) -> str:
+    """Prefer a stable udev-rule device name (e.g. /dev/arm_left) over the raw ttyACM* fallback."""
+    path = f"/dev/{udev_name}"
+    return path if os.path.exists(path) else fallback
 
 
 class XLerobot2WheelsHost:
@@ -176,8 +183,12 @@ def main():
     
     parser = argparse.ArgumentParser(description="XLerobot2Wheels Host")
     parser.add_argument("--robot.id", type=str, default="xlerobot_2wheels", help="Robot ID")
-    parser.add_argument("--robot.port1", type=str, default="/dev/ttyACM0", help="Port 1")
-    parser.add_argument("--robot.port2", type=str, default="/dev/ttyACM1", help="Port 2")
+    parser.add_argument(
+        "--robot.port1", type=str, default=_default_port("arm_left", "/dev/ttyACM0"), help="Port 1"
+    )
+    parser.add_argument(
+        "--robot.port2", type=str, default=_default_port("arm_right", "/dev/ttyACM1"), help="Port 2"
+    )
     parser.add_argument("--host.port_zmq_cmd", type=int, default=5555, help="ZMQ command port")
     parser.add_argument("--host.port_zmq_observations", type=int, default=5556, help="ZMQ observation port")
     parser.add_argument("--host.connection_time_s", type=int, default=3600, help="Connection time limit")

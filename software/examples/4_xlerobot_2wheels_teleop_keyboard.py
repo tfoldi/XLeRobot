@@ -10,11 +10,18 @@ PYTHONPATH=src python examples/4_xlerobot_2wheels_teleop_keyboard.py
 '''
 
 import argparse
+import os
 import time
 import numpy as np
 import math
 
 from lerobot.robots.xlerobot_2wheels import XLerobot2WheelsClient, XLerobot2WheelsClientConfig, XLerobot2WheelsConfig, XLerobot2Wheels
+
+
+def _default_port(udev_name: str, fallback: str) -> str:
+    """Prefer a stable udev-rule device name (e.g. /dev/arm_left) over the raw ttyACM* fallback."""
+    path = f"/dev/{udev_name}"
+    return path if os.path.exists(path) else fallback
 # from lerobot.utils.robot_utils import busy_wait
 from lerobot.utils.robot_utils import precise_sleep
 from lerobot.utils.visualization_utils import init_rerun, log_rerun_data
@@ -487,8 +494,14 @@ smooth_controller = SmoothBaseController()
 def main():
     parser = argparse.ArgumentParser(description="XLerobot2Wheels Keyboard Teleop")
     parser.add_argument("--robot.id", type=str, default="my_xlerobot_2wheels_lab", help="Robot config id")
-    parser.add_argument("--robot.port1", type=str, default="/dev/ttyACM0", help="Port 1 (arms + head bus)")
-    parser.add_argument("--robot.port2", type=str, default="/dev/ttyACM1", help="Port 2 (arms + wheels bus)")
+    parser.add_argument(
+        "--robot.port1", type=str, default=_default_port("arm_left", "/dev/ttyACM0"),
+        help="Port 1 (arms + head bus)",
+    )
+    parser.add_argument(
+        "--robot.port2", type=str, default=_default_port("arm_right", "/dev/ttyACM1"),
+        help="Port 2 (arms + wheels bus)",
+    )
     parser.add_argument(
         "--ip", type=str, default="localhost",
         help="'localhost' for local/wired connection, or the host's IP for a ZMQ connection",

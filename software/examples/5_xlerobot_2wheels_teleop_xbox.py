@@ -14,6 +14,7 @@ PYTHONPATH=src python examples/5_xlerobot_2wheels_teleop_xbox.py
 # the arms and head) - it stays at the robot's default speed_index.
 
 import argparse
+import os
 import time
 import numpy as np
 import math
@@ -28,6 +29,13 @@ from lerobot.robots.xlerobot_2wheels import (
 from lerobot.utils.robot_utils import precise_sleep
 from lerobot.utils.visualization_utils import init_rerun, log_rerun_data
 from lerobot.model.SO101Robot import SO101Kinematics
+
+
+def _default_port(udev_name: str, fallback: str) -> str:
+    """Prefer a stable udev-rule device name (e.g. /dev/arm_left) over the raw ttyACM* fallback."""
+    path = f"/dev/{udev_name}"
+    return path if os.path.exists(path) else fallback
+
 
 # Keymaps (semantic action: controller mapping) - Intuitive human control
 LEFT_KEYMAP = {
@@ -336,8 +344,14 @@ def get_xbox_base_pressed_keys(joystick, robot):
 def main():
     parser = argparse.ArgumentParser(description="XLerobot2Wheels Xbox Teleop")
     parser.add_argument("--robot.id", type=str, default="my_xlerobot_2wheels_lab", help="Robot config id")
-    parser.add_argument("--robot.port1", type=str, default="/dev/ttyACM0", help="Port 1 (arms + head bus)")
-    parser.add_argument("--robot.port2", type=str, default="/dev/ttyACM1", help="Port 2 (arms + wheels bus)")
+    parser.add_argument(
+        "--robot.port1", type=str, default=_default_port("arm_left", "/dev/ttyACM0"),
+        help="Port 1 (arms + head bus)",
+    )
+    parser.add_argument(
+        "--robot.port2", type=str, default=_default_port("arm_right", "/dev/ttyACM1"),
+        help="Port 2 (arms + wheels bus)",
+    )
     parser.add_argument(
         "--ip", type=str, default="localhost",
         help="'localhost' for local/wired connection, or the host's IP for a ZMQ connection",
