@@ -16,8 +16,9 @@ import socket
 from pathlib import Path
 from typing import Optional
 
-# Set the absolute path to the xlevr folder
-XLEVR_PATH = "/home/vec/lerobot/new/XLeVR"
+# This file lives inside the XLeVR folder itself, so derive the path instead of
+# hardcoding the original author's own machine's absolute path.
+XLEVR_PATH = str(Path(__file__).resolve().parent)
 
 def setup_xlevr_environment():
     """Setup xlevr environment"""
