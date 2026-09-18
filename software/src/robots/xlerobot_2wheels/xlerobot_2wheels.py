@@ -405,7 +405,12 @@ class XLerobot2Wheels(Robot):
         # Right wheel speed = (v + ω*L/2) / r
         left_wheel_speed = (x - theta_rad * wheelbase / 2) / wheel_radius
         right_wheel_speed = (x + theta_rad * wheelbase / 2) / wheel_radius
-        
+
+        # The left wheel motor is mounted mirrored relative to the right, so its raw
+        # command needs inverting - without this, x.vel alone produces pure rotation
+        # and theta.vel alone produces pure translation instead of the intended motion.
+        left_wheel_speed = -left_wheel_speed
+
         # Convert wheel speeds from rad/s to deg/s.
         left_wheel_degps = left_wheel_speed * (180.0 / np.pi)
         right_wheel_degps = right_wheel_speed * (180.0 / np.pi)
@@ -453,7 +458,8 @@ class XLerobot2Wheels(Robot):
             wheelbase = self.config.wheelbase
 
         # Convert each raw command back to an angular speed in deg/s.
-        left_degps = self._raw_to_degps(left_wheel_speed)
+        # Same mirrored-motor correction as _body_to_wheel_raw, applied to the feedback.
+        left_degps = -self._raw_to_degps(left_wheel_speed)
         right_degps = self._raw_to_degps(right_wheel_speed)
 
         # Convert from deg/s to rad/s.
