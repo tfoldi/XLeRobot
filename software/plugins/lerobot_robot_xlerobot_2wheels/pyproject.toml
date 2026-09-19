@@ -9,8 +9,6 @@ description = "XLeRobot 2-wheel base robot plugin for lerobot (RobotConfig.regis
 requires-python = ">=3.10"
 dependencies = [
     "lerobot[feetech]",
-    "numpy>=1.26.0",
-    "opencv-python-headless>=4.9.0",
     "pyzmq>=25.0.0",
 ]
 

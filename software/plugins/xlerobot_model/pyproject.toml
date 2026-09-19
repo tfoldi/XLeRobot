@@ -9,7 +9,6 @@ description = "Shared kinematics/robot-construction helpers used by the XLeRobot
 requires-python = ">=3.10"
 dependencies = [
     "lerobot",
-    "numpy>=1.26.0",
 ]
 
 [tool.hatch.build.targets.wheel]
