@@ -1,11 +1,11 @@
 # To Run on the host
 '''
-PYTHONPATH=src python -m lerobot.robots.xlerobot_2wheels.xlerobot_2wheels_host --robot.id=my_xlerobot_2wheels
+python -m lerobot_robot_xlerobot_2wheels.xlerobot_2wheels_host --robot.id=my_xlerobot_2wheels
 '''
 
 # To Run the teleop:
 '''
-PYTHONPATH=src python examples/5_xlerobot_2wheels_teleop_xbox.py
+python examples/5_xlerobot_2wheels_teleop_xbox.py
 # Optional: --robot.id=my_xlerobot_2wheels_lab --robot.port1=/dev/ttyACM0 --robot.port2=/dev/ttyACM1 --ip=localhost --fps=30 --controller.profile=generic
 '''
 
@@ -20,7 +20,7 @@ import numpy as np
 import math
 import pygame
 
-from lerobot.robots.xlerobot_2wheels import (
+from lerobot_robot_xlerobot_2wheels import (
     XLerobot2WheelsConfig,
     XLerobot2Wheels,
     XLerobot2WheelsClientConfig,
@@ -28,7 +28,7 @@ from lerobot.robots.xlerobot_2wheels import (
 )
 from lerobot.utils.robot_utils import precise_sleep
 from lerobot.utils.visualization_utils import init_rerun, log_rerun_data
-from lerobot.model.SO101Robot import SO101Kinematics
+from xlerobot_model.SO101Robot import SO101Kinematics
 
 
 def _default_port(udev_name: str, fallback: str) -> str:
